@@ -60,9 +60,11 @@ Create your environment file:
 ```code
 cp .env.example .env
 nano .env
+```
 
 Example .env:
 
+```code
 TZ=America/Toronto
 
 COMFY_URL=http://YOUR-COMFYUI-HOST:8188
@@ -99,7 +101,7 @@ docker logs -f wake-songservice
 
 Example REST command:
 
-``code
+```code
 rest_command:
   wake_swap_and_generate:
     url: "http://YOUR-SERVICE-HOST:8788/swap_and_generate"
@@ -109,7 +111,9 @@ rest_command:
 
 Your media player automation can play:
 
+```text
 wakeup-latest.mp3
+```
 
 from wherever you expose the latest wake-up song file.
 
@@ -153,11 +157,13 @@ GET /debug/comfy_history/<job_id>
 
 Useful for troubleshooting ComfyUI workflow failures.
 
-Genre Packs
+## Genre Packs
 
 Genre/style prompts live in:
 
+```text
 genre_packs.json
+```
 
 Each pack needs:
 ```code
@@ -181,7 +187,9 @@ GENRE_PICK_MODE=daily
 
 ComfyUI Workflow Notes
 
+```text
 This project expects an exported ComfyUI API workflow (sample included, but may require additional nodes), not the visual/editor workflow.
+```
 
 The default ACE-Step 1.5 node mapping used by app.py is:
 
@@ -193,3 +201,14 @@ The default ACE-Step 1.5 node mapping used by app.py is:
 ```
 
 If you export a different workflow, these node IDs may need to be updated in app.py.
+
+## Future Enhancements
+Turn into a Home Assistant adaptive soundtrack engine, generating generate context-aware music for household events.
+```text
+Welcome home / goodbye songs
+```text
+Arrive home → short triumphant welcome-home song
+Leave for work → upbeat “go crush the day” song
+Arriving home late → softer low-energy welcome song
+```
+```
