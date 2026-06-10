@@ -1,5 +1,7 @@
 # Daily Wake-Up Song
 
+Remember clock radios? They were great for waking up to a new song every day! This project brings back that experience by generating a new daily wake-up song for you!
+
 Automated daily wake-up song generation using **Ollama**, **ComfyUI**, and **ACE-Step 1.5**.
 
 This project runs a small Flask service that:
@@ -64,7 +66,7 @@ OLLAMA_MODEL=qwen2.5:32b
 OLLAMA_TIMEOUT=300
 
 WORKFLOW_PATH=/app/workflow/wakeup_api.json
-TARGET_SECONDS=120
+TARGET_SECONDS=135
 
 GENRE_PACKS_PATH=/app/genre_packs.json
 GENRE_PICK_MODE=random
