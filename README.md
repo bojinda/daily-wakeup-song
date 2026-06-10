@@ -32,12 +32,14 @@ Starts generating the next wakeup-new.mp3 in the background
 This means your automation can play the latest already-generated song immediately, while the next song is prepared for the following run.
 
 Requirements
+```http
 Docker and Docker Compose
 A running ComfyUI instance
 A working ACE-Step 1.5 ComfyUI API workflow
 A running Ollama server
 At least one Ollama text model installed
 Storage folders for latest and archived wake-up songs
+```
 Project Files
 app.py                   Flask service
 docker-compose.yml       Docker Compose service definition
