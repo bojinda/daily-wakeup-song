@@ -159,11 +159,3 @@ The default ACE-Step 1.5 node mapping used by app.py is:
 409 = seed source
 
 If you export a different workflow, these node IDs may need to be updated in app.py.
-
-Privacy and Safety
-
-Do not commit your real .env file.
-
-The .env.example file should contain placeholders only.
-
-Generated MP3s, archives, local cache files, and backup files should also be excluded from Git.
