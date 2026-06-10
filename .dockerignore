@@ -1,0 +1,11 @@
+.env
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.bak
+*.bak2
+*.mp3
+.cache/
+latest-wake/
+archive-wake/

@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+*.bak
+*.bak2
+*.mp3
+latest-wake/
+archive-wake/

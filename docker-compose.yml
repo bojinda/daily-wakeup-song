@@ -1,0 +1,16 @@
+services:
+  wake-songservice:
+    build: .
+    container_name: wake-songservice
+    restart: unless-stopped
+    user: "1000:1000"
+    working_dir: /app
+    env_file:
+      - .env
+    volumes:
+      - ./:/app:ro
+      - ../latest-wake:/latest-wake
+      - ../archive-wake:/archive-wake
+      - ../test.mp3:/seed/test.mp3:ro
+    ports:
+      - "8788:8788"
