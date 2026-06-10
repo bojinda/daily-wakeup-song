@@ -21,6 +21,7 @@ The service exposes:
 
 ```http
 POST /swap_and_generate
+```
 
 When called, it:
 
