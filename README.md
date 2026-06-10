@@ -303,6 +303,7 @@ Prompt could include weather text
 ```
 
 Calendar-aware songs
+
 See AI based calendar at:
 ```http
 https://github.com/bojinda/dashboard-generator
