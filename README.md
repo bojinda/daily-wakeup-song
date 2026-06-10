@@ -49,15 +49,16 @@ genre_packs.json         Genre/style prompt packs
 .env.example             Example environment configuration
 workflow/wakeup_api.json ComfyUI API workflow
 ```
-Setup
 
+Setup
+```http
 Clone the repository:
 
 git clone https://github.com/YOUR-USERNAME/daily-wakeup-song.git
 cd daily-wakeup-song
-
+```
 Create your environment file:
-
+```code
 cp .env.example .env
 nano .env
 
@@ -82,7 +83,7 @@ SEED_MP3=/seed/test.mp3
 
 LATEST_NAME=wakeup-latest.mp3
 NEW_NAME=wakeup-new.mp3
-
+```
 Start the service:
 
 docker compose up -d --build
