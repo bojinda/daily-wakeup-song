@@ -204,11 +204,189 @@ If you export a different workflow, these node IDs may need to be updated in app
 
 ## Future Enhancements
 Turn into a Home Assistant adaptive soundtrack engine, generating generate context-aware music for household events.
-```text
+
 Welcome home / goodbye songs
+
 ```text
 Arrive home → short triumphant welcome-home song
 Leave for work → upbeat “go crush the day” song
 Arriving home late → softer low-energy welcome song
 ```
+Example triggers
+
+```text
+person.HA_user changed to home
+phone connected to Wi-Fi
+garage/door opened
+WireGuard disabled because you’re home
+```
+
+Task-completion victory songs
+
+```Text
+Dishwasher unloaded → tiny heroic fanfare
+Laundry moved to dryer → goofy achievement song
+Office cleaned → orchestral victory theme
+Garage tidied → dad-rock “job well done” anthem
+Workout completed → power metal reward song
+```
+
+Example triggers
+
+```text
+camera confirms room state changed
+door/contact sensors
+smart plug usage patterns
+manual dashboard button
+voice command: “JARVIS, I finished cleaning”
+```
+
+Cleaning music with camera/person detection
+
+Possible logic
+
+```text
+Person detected in kitchen for >5 minutes
+AND vacuum is not running
+AND time is daytime/evening
+→ start cleaning playlist or generate cleaning song
+```
+```text
+Camera sees clutter level high
+Person starts moving around kitchen
+→ generate “cleaning montage” music
+```
+```text
+Camera detects likely cleaning activity
+→ HA asks/announces: “Cleaning mode, sir/madam?”
+→ user confirms by voice/button
+→ music starts
+```
+
+Dynamic “room soundtrack” mode
+```text
+Kitchen morning → jazz soul sunrise
+Office focus → low-lyric cinematic synthwave
+Garage work → southern rock / blues rock
+Living room evening → cozy acoustic / jazz
+Bathroom shower → ridiculous power ballad
+```
+
+Example triggers based on occupancy and environmental conditions
+
+```text
+room = kitchen
+time = morning
+weather = rainy
+presence = user
+mode = normal
+```
+
+Weather-aware songs
+
+```text
+Snowy morning → cozy orchestral folk wake-up song
+Rainy morning → dark cinematic synthwave
+Sunny weekend → funk/disco morning
+Storm warning → dramatic sea shanty
+Heat warning → lazy desert blues
+```
+
+Prompt could include weather text
+
+```code
+{
+  "weather": "rainy, 8C, dark morning",
+  "event": "wake_up",
+  "energy": "medium"
+}
+```
+
+Calendar-aware songs
+See AI based calendar at:
+```http
+https://github.com/bojinda/dashboard-generator
+```
+Calendar pulls events from Google and Home Assistant entities
+
+```text
+Early shift → aggressive high-energy wake-up track
+Day off → relaxed jazz/soul song
+Union meeting day → heroic speech-like anthem
+Travel day → road song
+Appointment day → gentle but punctual reminder song
+```
+
+```
+Today includes: work, union meeting, drive to Toronto
+Generate a confident morning song about getting moving.
+```
+
+Personalized recurring characters
+
+```text
+Captain Coffee
+The Morning Goblin
+Sir Laundry of the Dryer
+JARVIS as narrator
+A fake band name that changes by genre
+```
+
+Store as small SQLite file
+```text
+last_10_songs
+favorite_genres
+running_jokes
+recent_events
+```
+
+House event jingles
+
+```text
+Doorbell → custom 8-second chime
+Washer done → laundry jingle
+Dryer done → dryer victory riff
+Dinner timer → medieval feast horn
+Trash night → ominous garbage anthem
+Server alert → dramatic warning sting
+```
+Usage
+```text
+duration_seconds = 8–20
+lyrics = none or one phrase
+```
+
+Server / homelab status
+
+```text
+Proxmox rebooted successfully → triumphant orchestral fanfare
+Backup completed → calm success jingle
+Disk space warning → ominous synth alert
+GPU job finished → sci-fi lab success music
+ComfyUI crashed → sad trombone, obviously
+```
+
+Possible triggers
+```text
+Uptime Kuma
+Home Assistant sensors
+Docker health checks
+Proxmox API
+```
+
+Voice-command generated songs via Home Assistant
+```text
+“Generate me a two-minute song about cleaning the kitchen.”
+“Make a goodbye song for work.”
+“Make a dramatic song because the laundry is finally done.”
+“Generate battle music for fixing the server.”
+```
+
+Possible payload
+```code
+{
+  "topic": "I finally fixed Docker DNS",
+  "style": "heroic power metal",
+  "duration_seconds": 90
+}
 ```
