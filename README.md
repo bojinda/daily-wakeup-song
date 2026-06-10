@@ -32,7 +32,7 @@ Starts generating the next wakeup-new.mp3 in the background
 This means your automation can play the latest already-generated song immediately, while the next song is prepared for the following run.
 
 Requirements
-```http
+```text
 Docker and Docker Compose
 A running ComfyUI instance
 A working ACE-Step 1.5 ComfyUI API workflow
