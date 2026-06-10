@@ -41,12 +41,14 @@ At least one Ollama text model installed
 Storage folders for latest and archived wake-up songs
 ```
 Project Files
+```text
 app.py                   Flask service
 docker-compose.yml       Docker Compose service definition
 Dockerfile               Python container definition
 genre_packs.json         Genre/style prompt packs
 .env.example             Example environment configuration
 workflow/wakeup_api.json ComfyUI API workflow
+```
 Setup
 
 Clone the repository:
