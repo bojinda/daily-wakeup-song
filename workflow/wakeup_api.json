@@ -308,5 +308,19 @@
     "_meta": {
       "title": "Seed (rgthree)"
     }
+  },
+  "500": {
+    "inputs": {
+      "anything": [
+        "18",
+        0
+      ],
+      "unload_models": true,
+      "free_memory": true
+    },
+    "class_type": "ForceFreeMemory",
+    "_meta": {
+      "title": "Force Free Memory After Music"
+    }
   }
 }
