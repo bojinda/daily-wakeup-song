@@ -17,6 +17,8 @@ It is designed to work well with Home Assistant REST commands, cron jobs, or any
 
 Some sample clips using ACE-Step 1.5. Songs are set to 135 seconds by default, but I've tested with good results up to 200s
 
+[Sample 5.mp3](https://github.com/user-attachments/files/28855175/Sample.5.mp3)
+
 [Sample 4.mp3](https://github.com/user-attachments/files/28842477/Sample.4.mp3)
 
 [Sample 3.mp3](https://github.com/user-attachments/files/28842473/Sample.3.mp3)
