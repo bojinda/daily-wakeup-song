@@ -4,9 +4,9 @@ Some sample clips using ACE-Step 1.5, songs are set to 135 seconds by default, b
 
 [Sample 4.mp3](https://github.com/user-attachments/files/28842477/Sample.4.mp3)
 
-[Sample 2.mp3](https://github.com/user-attachments/files/28842475/Sample.2.mp3)
-
 [Sample 3.mp3](https://github.com/user-attachments/files/28842473/Sample.3.mp3)
+
+[Sample 2.mp3](https://github.com/user-attachments/files/28842475/Sample.2.mp3)
 
 [Sample 1.mp3](https://github.com/user-attachments/files/28842469/Sample.1.mp3)
 
