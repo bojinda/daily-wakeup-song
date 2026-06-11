@@ -25,6 +25,35 @@ TARGET_SECONDS = int(os.environ.get("TARGET_SECONDS", "120"))
 app = Flask(__name__)
 JOBS = {}
 
+VOCAL_GENDER_PROFILES = [
+    {
+        "gender": "male",
+        "lead_vocal": "a powerful male lead vocalist",
+        "chorus_vocal": "a large male chorus",
+        "voice_register": "deep, resonant baritone vocals",
+    },
+    {
+        "gender": "female",
+        "lead_vocal": "a powerful female lead vocalist",
+        "chorus_vocal": "a large female chorus",
+        "voice_register": "rich, expressive alto vocals",
+    },
+]
+
+def apply_vocal_gender_tags(tags: str) -> tuple[str, str]:
+    profile = random.choice(VOCAL_GENDER_PROFILES)
+
+    try:
+        tags = tags.format(
+            lead_vocal=profile["lead_vocal"],
+            chorus_vocal=profile["chorus_vocal"],
+            voice_register=profile["voice_register"],
+        )
+    except KeyError as e:
+        raise RuntimeError(f"Unknown vocal placeholder in genre tags: {e}")
+
+    return tags, profile["gender"]
+
 def load_genre_packs():
     with open(GENRE_PACKS_PATH, "r", encoding="utf-8") as f:
         packs = json.load(f)
@@ -238,8 +267,12 @@ def generate_new(job_id: str):
         pack = pick_genre_pack()
         JOBS[job_id]["pack"] = pack["name"]
 
+        gendered_tags, vocal_gender = apply_vocal_gender_tags(pack["tags"])
+        JOBS[job_id]["vocal_gender"] = vocal_gender
+        JOBS[job_id]["base_tags_preview"] = gendered_tags[:300]
+
         # 1) Ask Ollama for tags+lyrics
-        tl = ollama_make_tags_and_lyrics(pack["name"], pack["tags"])
+        tl = ollama_make_tags_and_lyrics(pack["name"], gendered_tags)
         tags = tl["tags"]
         lyrics = tl["lyrics"]
         JOBS[job_id]["tags_preview"] = tags[:300]
