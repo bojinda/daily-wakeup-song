@@ -1,6 +1,6 @@
 # Daily Wake-Up Song
 
-Remember clock radios? They were great for waking up to a new song every day! This project brings back that experience by generating a new daily wake-up song for you!
+Remember clock radios? They were great for waking up to a random song every day! This project brings back that experience by generating a new daily wake-up song for you!
 
 Automated daily wake-up song generation using **Ollama**, **ComfyUI**, and **ACE-Step 1.5**.
 
