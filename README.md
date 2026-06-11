@@ -15,7 +15,7 @@ This project runs a small Flask service that:
 
 It is designed to work well with Home Assistant REST commands, cron jobs, or any automation system that can send an HTTP POST request.
 
-Some sample clips using ACE-Step 1.5, songs are set to 135 seconds by default, but I've tested with good results up to 200s
+Some sample clips using ACE-Step 1.5. Songs are set to 135 seconds by default, but I've tested with good results up to 200s
 
 [Sample 4.mp3](https://github.com/user-attachments/files/28842477/Sample.4.mp3)
 
