@@ -1,5 +1,11 @@
 # Daily Wake-Up Song
 
+Some sample clips using ACE-Step 1.5, songs are set to 135 seconds by default, but I've tested with good results up to 200s
+[Sample 4.mp3](https://github.com/user-attachments/files/28842477/Sample.4.mp3)
+[Sample 2.mp3](https://github.com/user-attachments/files/28842475/Sample.2.mp3)
+[Sample 3.mp3](https://github.com/user-attachments/files/28842473/Sample.3.mp3)
+[Sample 1.mp3](https://github.com/user-attachments/files/28842469/Sample.1.mp3)
+
 Remember clock radios? They were great for waking up to a new song every day! This project brings back that experience by generating a new daily wake-up song for you!
 
 Automated daily wake-up song generation using **Ollama**, **ComfyUI**, and **ACE-Step 1.5**.
