@@ -1,5 +1,24 @@
 # Daily Wake-Up Song
 
+R2 status: offline runner adapter implemented for review; nothing deployed.
+Lyrics/tags use the canonical runner's GPU1 target; music uses its separate GPU0
+ComfyUI target after GPU1 cleanup/release. The existing song is archived/promoted
+before waiting, and replacement work stays in the background. New MP3 publication
+is atomic; uncertain or failed work preserves the current playable song.
+
+HA routes and normal started responses remain. Concurrent triggers report the
+active job as busy without another rotation/generation. For a retry, optionally
+reuse `X-Request-ID`; completed IDs return the recorded response and `/job/<id>`
+reads persistent status after restart. Incomplete/error operations are not replayed
+automatically. Existing callers without the header retain timestamp IDs.
+
+See [the canonical roadmap](../aihub-gpu-runner/roadmap.md) and
+[music client/live gates](../aihub-gpu-runner/docs/music-client.md). Canonical SDK
+installation/configuration, private persistent state, live version/cleanup calibration,
+caller exclusion/GPU placement and meeting follow-ups remain pending. Existing
+Docker/Compose, genre packs, workflow and ComfyUI dependencies are unchanged.
+No live jobs, service/caller changes or cron restoration are authorized.
+
 Remember clock radios? They were great for waking up to a random song every day! This project brings back that experience by generating a new daily wake-up song for you!
 
 Automated daily wake-up song generation using **Ollama**, **ComfyUI**, and **ACE-Step 1.5**.
