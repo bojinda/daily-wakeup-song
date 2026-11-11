@@ -1,10 +1,13 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from urllib.parse import urlencode
 import os, shutil, tempfile, datetime as dt, threading, time
 import json, hashlib, random
 import requests
 import copy
 import traceback
+from gpu_runner import chat as runner_chat, music as runner_music
+from aihub_gpu_runner.client import CURRENT_OPERATION, OutputSlot, OutputBusy, CoordinationError, publish_bytes
+from aihub_gpu_runner.core import check_id
 os.umask(0o022)
 
 OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "300"))
@@ -86,10 +89,25 @@ def archive_file(path: str):
     if not os.path.exists(path):
         return None
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
-    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    archive_path = os.path.join(ARCHIVE_DIR, f"wakeup-{stamp}.mp3")
-    shutil.copyfile(path, archive_path)
-    return archive_path
+    moment = dt.datetime.now()
+    while True:
+        stamp = moment.strftime("%Y-%m-%d_%H%M%S")
+        archive_path = os.path.join(ARCHIVE_DIR, f"wakeup-{stamp}.mp3")
+        try:
+            with open(archive_path, "xb") as destination, open(path, "rb") as source:
+                shutil.copyfileobj(source, destination)
+                destination.flush()
+                os.fsync(destination.fileno())
+            return archive_path
+        except FileExistsError:
+            moment += dt.timedelta(seconds=1)
+        except BaseException:
+            try:
+                os.unlink(archive_path)
+            except FileNotFoundError:
+                pass
+            raise
+
 
 def pick_genre_pack():
     mode = os.environ.get("GENRE_PICK_MODE", "random").lower()
@@ -124,10 +142,7 @@ def ollama_make_tags_and_lyrics(pack_name: str, pack_tags: str) -> dict:
         "seed_phrase": "good morning"
     }
 
-    # Use Ollama /api/chat for better control
-    r = requests.post(
-        f"{OLLAMA_URL}/api/chat",
-        json={
+    resp = runner_chat({
             "model": OLLAMA_MODEL,
             "messages": [
                 {"role":"system","content":system},
@@ -140,11 +155,7 @@ def ollama_make_tags_and_lyrics(pack_name: str, pack_tags: str) -> dict:
                 "temperature": 0.8,
                 "num_predict": 900
             }    
-        },
-        timeout=OLLAMA_TIMEOUT
-    )
-    r.raise_for_status()
-    resp = r.json()
+        }, on_status=_runner_progress)
     content = (resp.get("message", {}).get("content") or "").strip()
 
     out = {}
@@ -201,117 +212,85 @@ def ollama_make_tags_and_lyrics(pack_name: str, pack_tags: str) -> dict:
     out["lyrics"] = out["lyrics"].strip()
     return out
 
-def _find_file_records(obj):
-    """
-    Recursively find dicts that look like Comfy file records:
-    {"filename": "...", "subfolder": "...", "type": "..."}
-    """
-    found = []
-    if isinstance(obj, dict):
-        if "filename" in obj and isinstance(obj["filename"], str):
-            found.append({
-                "filename": obj["filename"],
-                "subfolder": obj.get("subfolder", "") or "",
-                "type": obj.get("type", "output") or "output",
-            })
-        for v in obj.values():
-            found.extend(_find_file_records(v))
-    elif isinstance(obj, list):
-        for item in obj:
-            found.extend(_find_file_records(item))
-    return found
+_OUTPUT_SLOT = None
 
-def comfy_generate_mp3(job_id: str, workflow: dict) -> str:
-    client_id = f"wake-{random.randint(100000,999999)}"
-    r = requests.post(
-        f"{COMFY_URL}/prompt",
-        json={"prompt": workflow, "client_id": client_id},
-        timeout=30
-    )
+def _output_slot():
+    global _OUTPUT_SLOT
+    if _OUTPUT_SLOT is None:
+        _OUTPUT_SLOT = OutputSlot(os.environ.get("GPU_RUNNER_CLIENT_STATE", "/var/lib/wake-song-gpu-client"),
+                                  [os.path.join(LATEST_DIR, LATEST_NAME), os.path.join(LATEST_DIR, NEW_NAME), ARCHIVE_DIR])
+    return _OUTPUT_SLOT
 
-    if not r.ok:
-        raise RuntimeError(f"ComfyUI /prompt failed: HTTP {r.status_code}: {r.text[:3000]}")
+def _set_job(operation, **fields):
+    operation.update_details(**fields)
+    JOBS[operation.request_id] = dict(operation.record.get("details", {}))
 
-    prompt_id = r.json()["prompt_id"]
-    JOBS[job_id]["prompt_id"] = prompt_id
-
-    deadline = time.time() + 1800  # 30 min max
-    while time.time() < deadline:
-        h = requests.get(f"{COMFY_URL}/history/{prompt_id}", timeout=30)
-        h.raise_for_status()
-        hist = h.json()
-        item = hist.get(prompt_id)
-
-        if item:
-            # Search everything Comfy returned for file records
-            file_recs = _find_file_records(item)
-
-            # Prefer mp3
-            mp3s = [f for f in file_recs if f["filename"].lower().endswith(".mp3")]
-            pick = (mp3s or file_recs)
-            if pick:
-                f0 = pick[0]
-                qs = urlencode({"filename": f0["filename"], "subfolder": f0["subfolder"], "type": f0["type"]})
-                url = f"{COMFY_URL}/view?{qs}"
-                JOBS[job_id]["mp3_url"] = url
-                return url
-
-        time.sleep(3)
-
-    raise RuntimeError("Timed out waiting for ComfyUI audio output")
-
-def generate_new(job_id: str):
+def _get_job(job_id):
     try:
-        JOBS[job_id]["status"] = "running"
+        check_id(job_id)
+    except ValueError:
+        return {"status": "unknown"}
+    record = _output_slot().operation_status(job_id)
+    if record is None:
+        return {"status": "unknown"}
+    job = dict(record.get("details", {}))
+    if record["status"] == "error" and job.get("status") in ("queued", "running"):
+        job.update(status="error", error="interrupted_output_operation_no_replay")
+    return job
 
-        pack = pick_genre_pack()
-        JOBS[job_id]["pack"] = pack["name"]
+def _runner_progress(status):
+    operation = CURRENT_OPERATION.get()
+    if operation is None:
+        raise CoordinationError("owned_music_operation_required")
+    fields = {"runner_job_id": status["request_id"], "runner_state": status["state"]}
+    prompt_id = status.get("backend_detail", {}).get("prompt_id")
+    if prompt_id:
+        fields["prompt_id"] = prompt_id
+    _set_job(operation, **fields)
 
+def comfy_generate_mp3(job_id: str, workflow: dict):
+    data, metadata = runner_music(workflow, on_status=_runner_progress)
+    url = COMFY_URL.rstrip("/") + "/view?" + urlencode({
+        "filename": metadata["filename"], "subfolder": metadata.get("subfolder", ""), "type": "output"})
+    _set_job(CURRENT_OPERATION.get(), prompt_id=metadata["prompt_id"], mp3_url=url)
+    return data
+
+def generate_new(job_id: str, operation):
+    token = CURRENT_OPERATION.set(operation)
+    try:
+        _set_job(operation, status="running")
+        pack = operation.snapshot("genre-choice", pick_genre_pack())
         gendered_tags, vocal_gender = apply_vocal_gender_tags(pack["tags"])
-        JOBS[job_id]["vocal_gender"] = vocal_gender
-        JOBS[job_id]["base_tags_preview"] = gendered_tags[:300]
+        voice = operation.snapshot("vocal-choice", {"tags": gendered_tags, "gender": vocal_gender})
+        _set_job(operation, pack=pack["name"], vocal_gender=voice["gender"], base_tags_preview=voice["tags"][:300])
 
-        # 1) Ask Ollama for tags+lyrics
-        tl = ollama_make_tags_and_lyrics(pack["name"], gendered_tags)
-        tags = tl["tags"]
-        lyrics = tl["lyrics"]
-        JOBS[job_id]["tags_preview"] = tags[:300]
-        JOBS[job_id]["lyrics_preview"] = lyrics[:300]
+        # GPU1 request and owned cleanup/release complete before GPU0 admission.
+        tl = ollama_make_tags_and_lyrics(pack["name"], voice["tags"])
+        tags, lyrics = tl["tags"], tl["lyrics"]
+        _set_job(operation, tags_preview=tags[:300], lyrics_preview=lyrics[:300])
 
-        # 2) Build workflow from your API JSON (copy your dict here or load it)
         workflow = copy.deepcopy(WORKFLOW_TEMPLATE)
-
-        # ACE-Step 1.5 workflow source nodes
-        # 225 feeds TextEncodeAceStepAudio1.5 tags / genre prompt
-        # 226 feeds TextEncodeAceStepAudio1.5 lyrics / song prompt
-        # 117 feeds both duration and EmptyAceStep1.5LatentAudio seconds
-        # 409 feeds the rgthree Seed node
         workflow["225"]["inputs"]["value"] = tags
         workflow["226"]["inputs"]["value"] = lyrics
         workflow["117"]["inputs"]["value"] = TARGET_SECONDS
         workflow["409"]["inputs"]["seed"] = random.randint(1, 999_999_999_999_999)
 
-        # 3) Run Comfy and download MP3
-        mp3_url = comfy_generate_mp3(job_id, workflow)
-
-        dl = requests.get(mp3_url, timeout=300)
-        dl.raise_for_status()
-
-        # 4) Write to wakeup-new.mp3 atomically + chmod 644
-        new_path = os.path.join(LATEST_DIR, NEW_NAME)
-        fd, tmp = tempfile.mkstemp(prefix=".tmp-", dir=os.path.dirname(new_path))
-        os.close(fd)
-        with open(tmp, "wb") as f:
-            f.write(dl.content)
-        os.replace(tmp, new_path)
-        os.chmod(new_path, 0o644)
-
-        JOBS[job_id]["status"] = "done"
-
-    except Exception as e:
-        JOBS[job_id]["status"] = "error"
-        JOBS[job_id]["error"] = str(e)
-        JOBS[job_id]["traceback"] = traceback.format_exc()
+        audio = comfy_generate_mp3(job_id, workflow)
+        publish_bytes(os.path.join(LATEST_DIR, NEW_NAME), audio, mode=0o644)
+        _set_job(operation, status="done")
+        operation.finish(operation.record["response"])
+    except Exception as exc:
+        if operation.lock is not None:
+            try:
+                _set_job(operation, status="error", error=str(exc), traceback=traceback.format_exc())
+            finally:
+                operation.finish(error=str(exc))
+        else:
+            # Publication may be complete but metadata synchronization failed.
+            # The CPU guard is released: never overwrite a subsequent owner.
+            print(f"Music status synchronization failed for {job_id}: {exc}", flush=True)
+    finally:
+        CURRENT_OPERATION.reset(token)
 
 @app.get("/health")
 def health():
@@ -319,35 +298,47 @@ def health():
 
 @app.post("/swap_and_generate")
 def swap_and_generate():
-    latest_path = os.path.join(LATEST_DIR, LATEST_NAME)
-    new_path    = os.path.join(LATEST_DIR, NEW_NAME)
-
-    archived = archive_file(latest_path)
-
-    promoted = False
-    if os.path.exists(new_path):
-        # Promote NEW -> LATEST atomically
-        os.replace(new_path, latest_path)
-        os.chmod(latest_path, 0o644)
-        promoted = True
-
-    job_id = dt.datetime.now().strftime("%Y%m%d%H%M%S%f")
-    JOBS[job_id] = {"status": "queued", "archived": archived, "promoted": promoted}
-    t = threading.Thread(target=generate_new, args=(job_id,), daemon=True)
-    t.start()
-
-    return jsonify({
-        "job_id": job_id,
-        "archived": archived,
-        "promoted": promoted,
-        "latest": f"{LATEST_DIR}/{LATEST_NAME}",
-        "new": f"{LATEST_DIR}/{NEW_NAME}",
-        "status": "started"
-    })
+    job_id = request.headers.get("X-Request-ID") or dt.datetime.now().strftime("%Y%m%d%H%M%S%f")
+    try:
+        operation = _output_slot().begin("swap-and-generate", job_id)
+    except OutputBusy:
+        active = _output_slot().status()
+        details = active.get("details", {})
+        return jsonify({"job_id": active.get("request_id"), "archived": details.get("archived"),
+                        "promoted": details.get("promoted", False), "latest": f"{LATEST_DIR}/{LATEST_NAME}",
+                        "new": f"{LATEST_DIR}/{NEW_NAME}", "status": "busy"})
+    except ValueError:
+        return jsonify({"error": "Invalid X-Request-ID"}), 400
+    except CoordinationError as exc:
+        return jsonify({"job_id": job_id, "status": "error", "error": str(exc)}), 503
+    if operation.cached:
+        return jsonify(operation.record["response"])
+    try:
+        _set_job(operation, status="queued", archived=None, promoted=False)
+        latest_path = os.path.join(LATEST_DIR, LATEST_NAME)
+        new_path = os.path.join(LATEST_DIR, NEW_NAME)
+        archived = archive_file(latest_path)
+        promoted = False
+        if os.path.exists(new_path):
+            os.chmod(new_path, 0o644)
+            os.replace(new_path, latest_path)
+            promoted = True
+        response = {"job_id": job_id, "archived": archived, "promoted": promoted,
+                    "latest": f"{LATEST_DIR}/{LATEST_NAME}", "new": f"{LATEST_DIR}/{NEW_NAME}", "status": "started"}
+        operation.record["response"] = response
+        _set_job(operation, archived=archived, promoted=promoted)
+        threading.Thread(target=generate_new, args=(job_id, operation), daemon=True).start()
+        return jsonify(response)
+    except Exception as exc:
+        try:
+            _set_job(operation, status="error", error=str(exc))
+        finally:
+            operation.finish(error=str(exc))
+        return jsonify({"job_id": job_id, "status": "error", "error": str(exc)}), 500
 
 @app.get("/debug/comfy_history/<job_id>")
 def debug_comfy_history(job_id):
-    j = JOBS.get(job_id, {})
+    j = _get_job(job_id)
     pid = j.get("prompt_id")
     if not pid:
         return jsonify({"error": "no prompt_id yet", "job": j}), 400
@@ -356,7 +347,7 @@ def debug_comfy_history(job_id):
 
 @app.get("/job/<job_id>")
 def job_status(job_id):
-    return jsonify(JOBS.get(job_id, {"status": "unknown"}))
+    return jsonify(_get_job(job_id))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8788)
