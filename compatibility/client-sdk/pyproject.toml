@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aihub-gpu-runner"
+version = "0.1.0+reliability.20261101.2"
+description = "Preserved cooperative client SDK; not the CPU runner successor"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+include = ["aihub_gpu_runner*"]
