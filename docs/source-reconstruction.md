@@ -27,4 +27,4 @@ Reconstructed from verified private originals corresponding to pinned November s
 
 Source hashes describe the reconstruction baseline, before explicitly reviewed behavior changes. Current Git commits/build manifests identify candidate bytes. No production deployment is implied.
 
-Canonical plan: [runner roadmap](https://github.com/bojinda/aihub-gpu-runner/blob/codex/production-reliability-source-20261111/roadmap.md).
+Canonical plan: [runner roadmap](https://github.com/bojinda/aihub-gpu-runner/blob/codex/production-reliability-candidate-20261111/roadmap.md).
