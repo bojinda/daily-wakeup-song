@@ -1,0 +1,2 @@
+# Audit evidence is byte-preserved; never normalize snapshots or hash manifests.
+* -text
